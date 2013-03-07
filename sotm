@@ -1,0 +1,220 @@
+#!/bin/bash
+#This script was written by Andrew Ivans, student of the
+#Donetsk National Technical University, 2012
+#Due to loads of files in his Downloads directory
+#He didn't want to deal with all of them himself
+#So he wrote the script and made it work instead
+#BTW, the script is extensible (you can
+#just add a new extension to a category)
+#v1.028 07.06.12
+#historical site :)
+#elif [ ! -d "$1/$basename" ]; then
+#echo -e '\033[1;31m'"Something went wrong"'\033[0;39m'" with file"'\033[1;39m'" $basename."'\033[0;39m'" Maybe it does not exist, or you aren't the owner."
+#let errors++
+#echo "Die, die darling" >/dev/null
+#(: etis lacirotsih
+
+function the_very_file_moving {
+#$1 - path, $2 - $1/$basename
+
+if [ -O "$2" ]; then
+mv "$2" $1; echo "Moving $3 ${2##*/} to ${1##*.} directory"
+ans=1
+else
+echo -e '\033[1;31m'"Something went wrong"'\033[0;39m'" with file"'\033[1;39m'" ${2##*/}."'\033[0;39m'" The stars say that you do not own it."
+ans=0
+fi
+return $ans
+}
+
+function sort_out_the_mess {
+#here we initialize some variables and create folders by categories
+counter=$2
+limit=$3
+day=`date +%d.%m.%y`
+declare -i picmoved=0 vidmoved=0 archmoved=0 isomoved=0 trackmoved=0 docmoved=0 othermoved=0 errors=0
+
+#why, does it happen we do the same job twice a day (or even more times)?
+#certainly!
+i="unknown"
+while [ $i = "unknown" ]; do
+if [ -d "$1/$day" ]; then
+day="more_$day"
+else
+i="unique"
+fi
+done
+#so now the new folder name is unique
+echo "Current date is `date +%d.%m.%y`, so a new folder will look like '$day'."
+echo #
+cd $1
+mkdir $day 2>/dev/null
+cd $day
+mkdir pics videos archives isos musics docs others 2>/dev/null
+fn=$1/$day/list.sotm
+ls $1 > $fn
+#end initializing and creating
+
+while [ $counter -ge $limit ]; do
+basename=`head -1 $fn | tr -d "\n"`
+
+#replace spaces in filenames with _
+echo "$basename" | grep -q ' '
+if [ $? -eq 0 ]; then
+new=`echo $basename | sed -e "s/ /_/g"`
+mv "$1/$basename" "$1/$new"
+basename=$new
+fi
+#stop replacing
+
+ext=`echo "${basename##*.}" | tr A-Z a-z`
+if [ -f "$1/$basename" ]; then
+case "$ext" in
+
+#pics
+jpeg | jpg | png | gif | bmp | xcf) echo $4 | grep -q 'p' 
+if [ $? -eq 0 ]; then
+the_very_file_moving "./pics" "$1/$basename" "picture"
+let picmoved=picmoved+$?
+fi;;
+#scip
+
+#videos
+webm | avi | mpeg4 | mp4|  wmv | ogv) echo $4 | grep -q 'v'
+if [ $? -eq 0 ]; then
+the_very_file_moving "./videos" "$1/$basename" "video"
+let vidmoved=vidmoved+$?
+fi;;
+#soediv
+
+#archives
+zip | rar | gz | bz2 | 7z) echo $4 | grep -q 'a'
+if [ $? -eq 0 ]; then
+the_very_file_moving "./archives" "$1/$basename" "archive"
+let archmoved=archmoved+$?
+fi;;
+iso) echo $4 | grep -q 'i'
+if [ $? -eq 0 ]; then
+the_very_file_moving "./isos" "$1/$basename" "image"
+let isomoved=isomoved+$?
+fi;;
+#sevihcra
+
+#musics
+mp3) echo $4 | grep -q 'm'
+if [ $? -eq 0 ]; then
+the_very_file_moving "./musics" "$1/$basename" "track"
+let trackmoved=trackmoved+$?
+fi;;
+#scisum
+
+#docs
+doc | docx | pdf | rtf | xls | txt) echo $4 | grep -q 'd'
+if [ $? -eq 0 ]; then
+the_very_file_moving "./docs" "$1/$basename" "document"
+let docmoved=docmoved+$?
+fi;;
+#scod
+
+#others
+*) echo $4 | grep -q 'o'
+if [ $? -eq 0 ]; then
+the_very_file_moving "./others" "$1/$basename" "other file"
+let othermoved=othermoved+$?
+fi;;
+#srehto
+esac
+fi
+
+#decrementing counter and deleting top string from temporary file
+let counter--
+sed -i 1d $fn
+#end decrementing and deleting
+done
+
+echo #
+echo "Job done. $picmoved pictures, $vidmoved videos, $archmoved archives, $isomoved .iso images, $trackmoved music tracks, $docmoved documents, $othermoved other files sorted and moved. Have a nice day and your folders clean."
+
+#here we are trying to delete created directories: if a directory is empty, it will be destroyed
+rmdir pics videos archives isos musics docs others 2>/dev/null; rm $fn 2>/dev/null
+cd ..; rmdir $day 2>/dev/null
+cd ~/
+#and return path pointer to the home dir
+}
+#end of function ya know
+
+#giving help
+if [ $# -eq 0 ] || [ $1 = "--help" ]; then
+echo "##############################################################"
+echo -e '\033[1;31m'"SO"'\033[1;32m'"r"'\033[1;31m'"TM"'\033[1;32m'"e"'\033[0;39m'" - Sort Out The Mess Utility (written by A. Ivans, 2012)"
+echo "##############################################################"
+echo "Helps you in dealing with loads of files in your folders. It checks whether the"
+echo "number of files in the folder exceeds the preset limit, and moves files of"
+echo "appropriate types to a new folder containing categorized subfolders, such as"
+echo "/pics, /videos, /docs etc."
+echo #
+echo "  Options syntax: sotm [-pvaidmo] [+{0-9}] [path/]FOLDER"
+echo "    -p move pictures (to /pics)"
+echo "    -v move videos (to /videos)"
+echo "    -a move archives (to /archives)"
+echo "    -i move .iso images (to /isos)"
+echo "    -d move documents (to /docs)"
+echo "    -m move music tracks (to /tracks)"
+echo "    -o move other files (to /others)"
+echo "  e.g. 'sotm -pv FOLDER' move only pictures and videos"
+echo "       'sotm -pvadmo FOLDER' move all except of image files"
+echo "       'sotm +10 FOLDER' move all until there are only 10 files remaining"
+echo "       'sotm FOLDER' (without any options) the same, but move all of them"
+echo #
+echo "The preset limit makes SOTM work while the number of files in /FOLDER exceeds this limit."
+echo "If the limit is not set, all files will be moved (except folders)."
+echo "Actually, there is no strict order to type the parameters string. (e.g. 'sotm FOLDER -pv +10')"
+echo "The folder name (FOLDER) may be both absolute and relative."
+echo -e '\033[1;39m'"May the Code be with you"'\033[0;39m'
+exit 
+fi
+#pleh
+
+#main
+#default set
+options="-pvaidmo"
+limit=0
+folderpath=-1
+#set set
+
+#parsing parameters string
+arg_array=($1 $2 $3)
+for item in ${arg_array[*]} ; do
+echo $item | grep -q '^-'
+isoption=$?
+echo $item | grep -q '^\+'
+islimit=$?
+echo $item | grep -q '^\/'
+isabsolutefolder=$?
+echo $item | grep -q '^[A-Za-z0-9А-Яа-я]'
+isrelativefolder=$?
+
+if [ $isoption -eq 0 ]; then
+options=$item
+elif [ $islimit -eq 0 ]; then
+limit=$item
+elif [ $isabsolutefolder -eq 0 ]; then
+folderpath=$item
+elif [ $isrelativefolder -eq 0 ]; then
+folderpath=~+/$item
+fi
+done
+#parsed
+
+if [ -d $folderpath ]; then
+echo "Folder exists. Processing..."
+else
+echo "Folder does not exist, or not specified. Exiting."
+exit
+fi
+
+counter=$(((`ls -l $folderpath | grep ^ -c`)-1))
+if [ $counter -ge $limit ]; then
+sort_out_the_mess "$folderpath" "$counter" "$limit" "$options"
+fi
+#niam
