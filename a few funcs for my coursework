@@ -1,0 +1,222 @@
+#include <iostream>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+
+using namespace std;
+
+struct rgb_color
+{
+  double r, g, b;	
+};
+
+struct hsv_color
+{
+	double hue, saturation, value;
+};
+
+double asm_min (double r, double g, double b)
+{
+	double min_value=r;
+	__asm
+	{
+		xor cx, cx
+		fninit
+		fld g
+		fcom min_value
+		fstsw ax
+		sahf
+		jb change_value
+		step_two:
+		fninit
+		fld b
+		fcom min_value
+		fstsw ax
+		sahf
+		not cx
+		jb change_value
+		jmp end_f
+		change_value:
+		fstp min_value
+		jcxz step_two
+		end_f:
+		ffree st(0)
+	}
+	return min_value;
+}
+
+double asm_max (double r, double g, double b)
+{
+	double max_value=r;
+	__asm
+	{
+		finit
+		fld g
+		fcom max_value
+		fstsw ax
+		sahf
+		ja change_value
+		step_two:
+		finit
+		fld b
+		fcom max_value
+		fstsw ax
+		sahf
+		ja change_value
+		jmp end_f
+		change_value:
+		fstp max_value
+		end_f:
+	}
+	return max_value;
+}
+
+double minimum (struct rgb_color rgb)
+{
+	double min_color=rgb.r;
+	min_color = (rgb.r < rgb.g) ? rgb.r : rgb.g;
+	min_color = (rgb.b < min_color) ? rgb.b : min_color;
+	return min_color;
+}
+
+double maximum (struct rgb_color rgb)
+{
+	double max_color=rgb.r;
+	max_color = (rgb.r > rgb.g) ? rgb.r : rgb.g;
+	max_color = (rgb.b > max_color) ? rgb.b : max_color;
+	return max_color;
+}
+
+struct hsv_color asm_rgb2hsv (struct rgb_color rgb)
+{
+	struct hsv_color hsv;
+	double minimal, maximal;
+
+	__asm
+	{
+		//call maximum
+//		begin_t:
+//		mov hsv.value,0
+//		or hsv.value,hsv.value
+//		jz begin_t
+//		end_p:
+	}
+
+	return hsv;
+}
+
+struct hsv_color rgb2hsv (struct rgb_color rgb)
+{
+	struct hsv_color hsv;
+	double minimal, maximal;
+
+	hsv.value = maximum(rgb);
+	if (!hsv.value)
+	{
+		hsv.hue = hsv.saturation = 0;
+		return hsv;
+	}
+
+	rgb.r /= hsv.value;
+	rgb.g /= hsv.value;
+	rgb.b /= hsv.value;
+
+	minimal = minimum(rgb);
+	maximal = maximum(rgb);
+	hsv.value = (255 / hsv.value) * 100;	
+
+	hsv.saturation = (maximal - minimal) * 100;
+	if (!hsv.saturation)
+	{
+		hsv.hue = 0;
+		return hsv; //
+	}
+
+	rgb.r = (rgb.r - minimal)/(hsv.saturation);
+	rgb.g = (rgb.g - minimal)/(hsv.saturation);
+	rgb.b = (rgb.b - minimal)/(hsv.saturation);
+	minimal = minimum(rgb);
+	maximal = maximum(rgb);
+
+	if (maximal == rgb.r)
+	{
+		hsv.hue = 0.0 + 60.0 * (rgb.g - rgb.b);
+		hsv.hue += (hsv.hue < 0.0) ? 360.0 : 0.0;
+	}
+	else if (maximal == rgb.g)
+	{
+		hsv.hue = 120.0 + 60.0 * (rgb.b - rgb.r);
+	}
+	else
+	{
+		hsv.hue = 240.0 + 60.0 * (rgb.r - rgb.g);
+	}
+	return hsv;
+}
+
+struct rgb_color rgb_noise (struct rgb_color rgb, int level)
+{
+	double noise;
+	srand((unsigned)time(NULL));
+	noise = level - (rand() % (level * 2));
+
+	rgb.r += noise;
+	rgb.g += noise;
+	rgb.b += noise;
+
+	rgb.r = rgb.r < 0 ? 0 : rgb.r;
+	rgb.g = rgb.g < 0 ? 0 : rgb.g;
+	rgb.b = rgb.b < 0 ? 0 : rgb.b;
+	rgb.r = rgb.r > 255 ? 255 : rgb.r;
+	rgb.g = rgb.g > 255 ? 255 : rgb.g;
+	rgb.b = rgb.b > 255 ? 255 : rgb.b;
+	
+	return rgb;
+}
+
+struct hsv_color hsv_noise (struct hsv_color hsv, int level)
+{
+	double noise;
+	srand((unsigned)time(NULL));
+	noise = (level - (rand() % (level * 2)));
+
+	hsv.hue += noise;
+	hsv.saturation += noise;
+	hsv.value += noise;
+
+	hsv.hue = hsv.hue < 0 ? 0 : hsv.hue;
+	hsv.saturation = hsv.saturation < 0 ? 0 : hsv.saturation;
+	hsv.value = hsv.value < 0 ? 0 : hsv.value;
+	hsv.hue = hsv.hue > 360 ? 360 : hsv.hue;
+	hsv.saturation = hsv.saturation > 100 ? 100 : hsv.saturation;
+	hsv.value = hsv.value > 100 ? 100 : hsv.value;
+	
+	return hsv;
+}
+
+void main (int argc, char* argv[])
+{
+	struct hsv_color hsv;
+	struct rgb_color rgb;
+	double LOL;
+
+	rgb.r = 1.23232;//atof(argv[1]);
+	rgb.g = 0.777;//atof(argv[2]);
+	rgb.b = 2.6543;//atof(argv[3]);
+
+	LOL = asm_min(rgb.r, rgb.g, rgb.b);
+	cout << LOL << endl << endl;
+
+	cout << "Red: " << rgb.r << " green: " << rgb.g << " blue: " << rgb.b << endl;
+
+	hsv = rgb2hsv(rgb);
+	cout << "Hue = " << hsv.hue << ", saturation = " << hsv.saturation
+		<< ", value = " << hsv.value << endl;
+
+	rgb = rgb_noise(rgb,20);
+	cout << "Red: " << rgb.r << " green: " << rgb.g << " blue: " << rgb.b << endl;
+	
+	hsv = hsv_noise(hsv,20);
+	cout << "Hue = " << hsv.hue << ", saturation = " << hsv.saturation
+		<< ", value = " << hsv.value << endl;
+}
