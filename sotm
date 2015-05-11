@@ -1,12 +1,12 @@
 #!/bin/bash
-#This script was written by Andrew Ivans, student of the
+#This script was written by Andrew Ivanov, student of the
 #Donetsk National Technical University, 2012
 #Due to loads of files in his Downloads directory
 #He didn't want to deal with all of them himself
 #So he wrote the script and made it work instead
-#BTW, the script is extensible (you can
-#just add a new extension to a category)
-#v1.028 07.06.12
+#The script is extensible (one can just
+#add a new extension to a category)
+#v1.028.223.24.1.442.243.9999 release 07.06.12
 #historical site :)
 #elif [ ! -d "$1/$basename" ]; then
 #echo -e '\033[1;31m'"Something went wrong"'\033[0;39m'" with file"'\033[1;39m'" $basename."'\033[0;39m'" Maybe it does not exist, or you aren't the owner."
